@@ -145,13 +145,15 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 .status-row{min-height:132px!important;}
 .status-row-head .label{padding-right:0!important;}
 
-/* === Matrix Summary: freeze first 4 KPI columns 2026-09-29 === */
-#matrix th:nth-child(1),#matrix td:nth-child(1){position:sticky;left:0;z-index:4}
-#matrix th:nth-child(2),#matrix td:nth-child(2){position:sticky;left:70px;z-index:4}
-#matrix th:nth-child(3),#matrix td:nth-child(3){position:sticky;left:290px;z-index:4}
-#matrix th:nth-child(4),#matrix td:nth-child(4){position:sticky;left:450px;z-index:4;box-shadow:3px 0 4px rgba(23,53,91,.10)}
-#matrix tr:first-child th:nth-child(-n+4){z-index:7}
+/* === Matrix Summary: freeze first 4 KPI columns (robust) 2026-09-29 === */
+#matrix{border-collapse:separate;border-spacing:0;isolation:isolate}
+#matrix th:nth-child(1),#matrix td:nth-child(1){position:sticky;left:0;z-index:20;background:#d1e4f7}
+#matrix th:nth-child(2),#matrix td:nth-child(2){position:sticky;left:70px;z-index:20;background:#d1e4f7}
+#matrix th:nth-child(3),#matrix td:nth-child(3){position:sticky;left:290px;z-index:20;background:#d1e4f7}
+#matrix th:nth-child(4),#matrix td:nth-child(4){position:sticky;left:450px;z-index:20;background:#d1e4f7;box-shadow:5px 0 6px rgba(23,53,91,.18)}
+#matrix tr:first-child th:nth-child(-n+4){z-index:30;background:#174a7e;color:#fff}
 #matrix tr:not(:first-child) th:nth-child(-n+4),#matrix tr:not(:first-child) td:nth-child(-n+4){background:#d1e4f7}
+#matrix th:nth-child(5),#matrix td:nth-child(5){border-left:2px solid #9fbad3}
 </style></head>
 <body>
 <aside>
@@ -305,9 +307,25 @@ function applyEdits(){
  D=JSON.parse(JSON.stringify(BASE));
  seedYearData(D,currentYear); D.months=monthsForYear(currentYear); months=monthsForYear(currentYear);
  loadEdits().filter(e=>months.includes(e.month)).forEach(e=>{
-   let rows=D.data[e.month]||[], person=rows.find(x=>x.id===e.id), ki=e.kpiKey?.startsWith('base_')?Number(e.kpiKey.slice(5)):D.kpis.indexOf(e.kpi);
+   let rows=D.data[e.month]||[], person=rows.find(x=>x.id===e.id);
+   // Resolve KPI by its saved name first, so Training Evaluate and Bug Service Survey can never cross-map
+   // even if KPI Setup order is changed. Fall back to base_N only for older records.
+   let ki=D.kpis.indexOf(e.kpi);
+   if(ki<0 && e.kpiKey?.startsWith('base_')) ki=Number(e.kpiKey.slice(5));
    if(person && Number.isInteger(ki) && ki>=0 && ki<D.kpis.length) person.kpis[ki]={ttl:e.target,actual:e.actual,pct:e.pct};
  });
+
+ // 2026 fixed Survey value for Dararat only. This is applied by KPI NAME, not array position.
+ // Training Evaluate remains exactly as its own source data.
+ if(currentYear===2026){
+   const surveyIndex=D.kpis.indexOf('Bug Service Survey');
+   if(surveyIndex>=0){
+     months.forEach(month=>{
+       const person=(D.data[month]||[]).find(x=>String(x.id)==='160170037');
+       if(person) person.kpis[surveyIndex]={ttl:100,actual:83.41,pct:83.41};
+     });
+   }
+ }
 }
 function ttlRows(){
  let ids=[...new Set(months.flatMap(m=>(D.data[m]||[]).map(x=>x.id)))];
