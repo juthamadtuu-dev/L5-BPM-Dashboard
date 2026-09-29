@@ -135,7 +135,7 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 .status-row-head b{display:block!important;border-left:1px solid rgba(23,53,91,.12);padding-left:10px;text-align:center;font-size:25px!important;line-height:1.05}
 .status-row-head b::after{content:'KPI';display:block;font-size:11px;margin-top:5px;color:#60758a;font-weight:800}
 .status-row-head b[data-plural='1']::after{content:'KPIs'}
-.status-names{border-top:0!important;padding-top:0!important;margin-top:12px!important;display:flex;flex-direction:column;gap:6px;font-size:11px!important}
+.status-names{border-top:0!important;padding-top:0!important;margin-top:12px!important;white-space:pre-line;display:flex;flex-direction:column;gap:6px;font-size:11px!important}
 .status-names .kpi-name-pill{display:block;padding:7px 9px;border-radius:14px;background:rgba(255,255,255,.52);font-weight:600;color:#526d86}
 @media(max-width:1350px){.status-row-head .label{font-size:13px!important}.status-row-head{grid-template-columns:minmax(0,1fr) 48px}.status-row-head b{font-size:21px!important}}
 
@@ -664,8 +664,10 @@ function renderKpiStatusSummary(series){
  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val};
  set('overallKpiValue',overall==null?'-':fmt(overall));
  set('kpiAchieveCount',achieve+' KPI'); set('kpiFollowCount',follow+' KPI'); set('kpiActionCount',action+' KPI'); set('kpiNoDataCount',nodata+' KPI');
- const names=(test)=>series.filter((x,i)=>test(avgs[i])).map(x=>x.name); const show=a=>a.length?a.join(' • '):'-';
- set('kpiAchieveNames',show(names(v=>v!=null&&v>=95))); set('kpiFollowNames',show(names(v=>v!=null&&v>=90&&v<95))); set('kpiActionNames',show(names(v=>v!=null&&v<90))); set('kpiNoDataNames',show(names(v=>v==null)));
+ const names=(test)=>series.filter((x,i)=>test(avgs[i])).map(x=>x.name);
+ const show=a=>a.length?a.join(' • '):'-';
+ const showLines=a=>a.length?a.join('\n'):'-';
+ set('kpiAchieveNames',show(names(v=>v!=null&&v>=95))); set('kpiFollowNames',show(names(v=>v!=null&&v>=90&&v<95))); set('kpiActionNames',show(names(v=>v!=null&&v<90))); set('kpiNoDataNames',showLines(names(v=>v==null)));
 }
 
 const chartColors=['#2563eb','#16a34a','#f59e0b','#dc2626','#808080'];
@@ -932,6 +934,33 @@ async function generatePowerPoint(){
    s.addText('KPIs Snapshot',{x:.55,y:3.92,w:3,h:.3,fontFace:'Tahoma',fontSize:15,bold:true,color:text,margin:0});s.addShape(pptx.ShapeType.line,{x:.55,y:4.28,w:12.15,h:0,line:{color:'D9E2EC',pt:1}});
    annual.forEach((a,i)=>{let y=4.52+i*.43,c=cardColors[i]||blue,avg=a.avg==null?'–':fmt(a.avg);s.addShape(pptx.ShapeType.ellipse,{x:.62,y:y+.02,w:.13,h:.13,fill:{color:c},line:{color:c}});s.addText(a.name,{x:.86,y,w:4.05,h:.22,fontFace:'Tahoma',fontSize:10.5,color:text,margin:0,fit:'shrink'});s.addText('Annual '+avg,{x:5.1,y,w:2.8,h:.22,fontFace:'Tahoma',fontSize:10.5,bold:true,color:text,margin:0});let st=statusOf(a);s.addText(st[0],{x:9.15,y,w:2.25,h:.22,fontFace:'Tahoma',fontSize:9,bold:true,color:st[1],align:'center',margin:0});});
  }
+
+ function addStatusSummary(scope,defs){
+   const annual=annualData(defs);
+   const valid=annual.filter(a=>a.avg!=null);
+   const overall=valid.length?valid.reduce((s,a)=>s+a.avg,0)/valid.length:null;
+   const groups=[
+     {title:'Achieve',rule:'≥ 95%',fill:'EEF9F1',dot:'35C777',items:annual.filter(a=>a.avg!=null&&a.avg>=95)},
+     {title:'Follow-up',rule:'90 – 94.99%',fill:'FFF8E8',dot:'FF7A45',items:annual.filter(a=>a.avg!=null&&a.avg>=90&&a.avg<95)},
+     {title:'Need Action',rule:'< 90%',fill:'FFF0F1',dot:'E63B55',items:annual.filter(a=>a.avg!=null&&a.avg<90)},
+     {title:'No Data',rule:'',fill:'F7F8FA',dot:'C9B6E4',items:annual.filter(a=>a.avg==null)}
+   ];
+   let s=pptx.addSlide();
+   title(s,scope==='ALL'?'KPI Status Summary — Overall':'KPI Status Summary — '+scope,'Year '+currentYear);
+   s.addText('Overall KPI',{x:5.15,y:1.05,w:3,h:.28,fontFace:'Tahoma',fontSize:13,bold:true,color:muted,align:'center',margin:0});
+   s.addText(overall==null?'–':fmt(overall),{x:4.75,y:1.38,w:3.8,h:.72,fontFace:'Tahoma',fontSize:34,bold:true,color:navy,align:'center',margin:0});
+   s.addText('Average of KPIs with data',{x:4.75,y:2.10,w:3.8,h:.25,fontFace:'Tahoma',fontSize:10,color:muted,align:'center',margin:0});
+   s.addShape(pptx.ShapeType.line,{x:.65,y:2.58,w:12.0,h:0,line:{color:'D9E2EC',pt:1}});
+   groups.forEach((g,i)=>{
+     const x=.65+i*3.02, y=2.92, w=2.82, h=2.55;
+     s.addShape(pptx.ShapeType.roundRect,{x,y,w,h,rectRadius:.06,fill:{color:g.fill},line:{color:'D9E2EC',pt:1}});
+     s.addShape(pptx.ShapeType.ellipse,{x:x+.18,y:y+.20,w:.14,h:.14,fill:{color:g.dot},line:{color:g.dot}});
+     s.addText(g.title,{x:x+.38,y:y+.14,w:1.9,h:.25,fontFace:'Tahoma',fontSize:13,bold:true,color:text,margin:0});
+     s.addText(g.rule,{x:x+.18,y:y+.53,w:2.25,h:.22,fontFace:'Tahoma',fontSize:10,bold:true,color:muted,margin:0});
+     const itemText=g.items.length?g.items.map(a=>a.name).join('\n'):'-';
+     s.addText(itemText,{x:x+.18,y:y+.98,w:2.42,h:1.25,fontFace:'Tahoma',fontSize:10,color:text,margin:0,breakLine:false,fit:'shrink',valign:'top'});
+   });
+ }
  function addTrend(scope,defs){
    // Draw PPT chart on a separate off-screen canvas so the dashboard chart never moves/redraws.
    const holder=document.createElement('div');
@@ -963,10 +992,10 @@ if(!dataAsOf){
 }
 s.addText('Data as of: '+dataAsOf,{x:.65,y:4.0,w:5.15,h:.34,fontFace:'Tahoma',fontSize:14,color:'DCEBFA',align:'left',margin:0});
  // Overall first
- let pack=pptSeriesFor('ALL'),people=allPeople();addSummary('ALL',pack.series,people);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
+ let pack=pptSeriesFor('ALL'),people=allPeople();addSummary('ALL',pack.series,people);addStatusSummary('ALL',pack.series);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
  // Then each unit
  const units=[...new Set([...historyUnits(),...allPeople().map(x=>effectiveUnit(x)).filter(Boolean)])].sort((a,b)=>String(a).localeCompare(String(b),'th'));
- units.forEach(unit=>{let p=pptSeriesFor(unit),pp=allPeople().filter(x=>effectiveUnit(x)===unit);addSummary(unit,p.series,pp);addTrend(unit,p.series);addDetail(unit,p.series);});
+ units.forEach(unit=>{let p=pptSeriesFor(unit),pp=allPeople().filter(x=>effectiveUnit(x)===unit);addSummary(unit,p.series,pp);addStatusSummary(unit,p.series);addTrend(unit,p.series);addDetail(unit,p.series);});
  await pptx.writeFile({fileName:'L5_BPM_KPIs_Presentation_Overall_and_Units_'+currentYear+'.pptx'});
  }catch(e){console.error(e);alert('Generate PowerPoint ไม่สำเร็จ: '+e.message)}finally{btn.disabled=false;btn.textContent='📊 PPT Present'}}
 
