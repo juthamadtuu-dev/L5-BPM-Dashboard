@@ -135,7 +135,7 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 .status-row-head b{display:block!important;border-left:1px solid rgba(23,53,91,.12);padding-left:10px;text-align:center;font-size:25px!important;line-height:1.05}
 .status-row-head b::after{content:'KPI';display:block;font-size:11px;margin-top:5px;color:#60758a;font-weight:800}
 .status-row-head b[data-plural='1']::after{content:'KPIs'}
-.status-names{border-top:0!important;padding-top:0!important;margin-top:12px!important;white-space:pre-line;display:flex;flex-direction:column;gap:6px;font-size:11px!important}
+.status-names{border-top:0!important;padding-top:0!important;margin-top:12px!important;white-space:pre-line;display:block;flex-direction:column;gap:6px;font-size:11px!important}
 .status-names .kpi-name-pill{display:block;padding:7px 9px;border-radius:14px;background:rgba(255,255,255,.52);font-weight:600;color:#526d86}
 @media(max-width:1350px){.status-row-head .label{font-size:13px!important}.status-row-head{grid-template-columns:minmax(0,1fr) 48px}.status-row-head b{font-size:21px!important}}
 
@@ -154,6 +154,10 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 #matrix tr:first-child th:nth-child(-n+4){z-index:30;background:#174a7e;color:#fff}
 #matrix tr:not(:first-child) th:nth-child(-n+4),#matrix tr:not(:first-child) td:nth-child(-n+4){background:#d1e4f7}
 #matrix th:nth-child(5),#matrix td:nth-child(5){border-left:2px solid #9fbad3}
+
+#kpiNoDataNames{white-space:pre-line!important;font-size:12px!important;line-height:1.55!important}
+#kpiNoDataNames::first-line{white-space:nowrap}
+
 </style></head>
 <body>
 <aside>
@@ -666,7 +670,10 @@ function renderKpiStatusSummary(series){
  set('kpiAchieveCount',achieve+' KPI'); set('kpiFollowCount',follow+' KPI'); set('kpiActionCount',action+' KPI'); set('kpiNoDataCount',nodata+' KPI');
  const names=(test)=>series.filter((x,i)=>test(avgs[i])).map(x=>x.name);
  const show=a=>a.length?a.join(' • '):'-';
- const showLines=a=>a.length?a.join('\n'):'-';
+ const showLines=a=>{
+   if(!a.length)return '-';
+   return a.map(x=>x==='MDM Tools / Dashboard'?'MDM Tools/Dashboard':x).join('\n');
+ };
  set('kpiAchieveNames',show(names(v=>v!=null&&v>=95))); set('kpiFollowNames',show(names(v=>v!=null&&v>=90&&v<95))); set('kpiActionNames',show(names(v=>v!=null&&v<90))); set('kpiNoDataNames',showLines(names(v=>v==null)));
 }
 
@@ -957,7 +964,7 @@ async function generatePowerPoint(){
      s.addShape(pptx.ShapeType.ellipse,{x:x+.18,y:y+.20,w:.14,h:.14,fill:{color:g.dot},line:{color:g.dot}});
      s.addText(g.title,{x:x+.38,y:y+.14,w:1.9,h:.25,fontFace:'Tahoma',fontSize:13,bold:true,color:text,margin:0});
      s.addText(g.rule,{x:x+.18,y:y+.53,w:2.25,h:.22,fontFace:'Tahoma',fontSize:10,bold:true,color:muted,margin:0});
-     const itemText=g.items.length?g.items.map(a=>a.name).join('\n'):'-';
+     const itemText=g.items.length?g.items.map(a=>a.name==='MDM Tools / Dashboard'?'MDM Tools/Dashboard':a.name).join('\n'):'-';
      s.addText(itemText,{x:x+.18,y:y+.98,w:2.42,h:1.25,fontFace:'Tahoma',fontSize:10,color:text,margin:0,breakLine:false,fit:'shrink',valign:'top'});
    });
  }
@@ -992,7 +999,7 @@ if(!dataAsOf){
 }
 s.addText('Data as of: '+dataAsOf,{x:.65,y:4.0,w:5.15,h:.34,fontFace:'Tahoma',fontSize:14,color:'DCEBFA',align:'left',margin:0});
  // Overall first
- let pack=pptSeriesFor('ALL'),people=allPeople();addSummary('ALL',pack.series,people);addStatusSummary('ALL',pack.series);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
+ let pack=pptSeriesFor('ALL'),people=allPeople();addStatusSummary('ALL',pack.series);addSummary('ALL',pack.series,people);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
  // Then each unit
  const units=[...new Set([...historyUnits(),...allPeople().map(x=>effectiveUnit(x)).filter(Boolean)])].sort((a,b)=>String(a).localeCompare(String(b),'th'));
  units.forEach(unit=>{let p=pptSeriesFor(unit),pp=allPeople().filter(x=>effectiveUnit(x)===unit);addSummary(unit,p.series,pp);addStatusSummary(unit,p.series);addTrend(unit,p.series);addDetail(unit,p.series);});
