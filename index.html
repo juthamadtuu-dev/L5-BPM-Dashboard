@@ -496,6 +496,15 @@ function kpiCell(row,k,month,id){
      // 3) exact displayed key only; do not mix all logical aliases
      if(!e)e=rev.find(x=>sameRow(x)&&x.kpiKey===k.key);
      if(e)return {ttl:e.target,actual:e.actual,pct:e.pct};
+
+     // Show a KPI only in the month where that KPI actually has source data.
+     // This prevents a value saved in the latest month from appearing in earlier months.
+     const rawExact=RAW_KEY_DATA.find(r=>
+       r.month===month && String(r.id)===String(id) &&
+       String(r.kpi||'').trim()===String(k.original||k.display||'').trim()
+     );
+     if(!rawExact)return {ttl:null,actual:null,pct:null};
+     return {ttl:rawExact.ttl,actual:rawExact.actual,pct:rawExact.pct};
    }
    return row?.kpis?.[k.baseIndex]||{ttl:null,actual:null,pct:null};
  }
