@@ -534,6 +534,37 @@ function keyDataRows(){
  const canonicalKey=(month,id,name,key)=>{let d=defForName(name,key);return month+'|'+id+'|'+(d?.key||key||name);};
  let map=new Map();
  baseRows.forEach(r=>{let d=defForName(r.kpi,r.kpiKey);map.set(canonicalKey(r.month,r.id,r.kpi,r.kpiKey),{...r,kpiKey:d?.key||r.kpiKey||'',kpi:d?.display||r.kpi,source:'Excel'});});
+
+ // FIX: Key Data must show EVERY month that actually has KPI data in the dashboard,
+ // not only the latest/raw imported month. Build missing Key Data rows directly
+ // from the monthly dashboard dataset (D.data) before applying Input Score edits.
+ months.forEach(month=>{
+   (D.data[month]||[]).forEach(person=>{
+     (person.kpis||[]).forEach((cell,idx)=>{
+       if(!cell || (cell.ttl==null && cell.actual==null && cell.pct==null)) return;
+       let d=defs.find(x=>x.baseIndex===idx) || defs.find(x=>x.key==='base_'+idx);
+       if(!d) return;
+       let key=canonicalKey(month,person.id,d.display||d.original,d.key);
+       if(!map.has(key)){
+         map.set(key,{
+           month:month,
+           id:String(person.id),
+           name:person.name||String(person.id),
+           unit:person.position||'',
+           evaluator:person.evaluator||'',
+           kpiKey:d.key||('base_'+idx),
+           kpi:d.display||d.original||('KPI '+(idx+1)),
+           ttl:cell.ttl,
+           actual:cell.actual,
+           pct:cell.pct,
+           remark:'',
+           source:'Dashboard Month'
+         });
+       }
+     });
+   });
+ });
+
  edits.forEach(e=>{
    let kd=defForName(e.kpi,e.kpiKey), person=allPeople().find(x=>x.id===e.id);
    let key=canonicalKey(e.month,e.id,e.kpi,e.kpiKey);
