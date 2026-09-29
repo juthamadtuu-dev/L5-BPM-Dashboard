@@ -138,6 +138,12 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 .status-names{border-top:0!important;padding-top:0!important;margin-top:12px!important;display:flex;flex-direction:column;gap:6px;font-size:11px!important}
 .status-names .kpi-name-pill{display:block;padding:7px 9px;border-radius:14px;background:rgba(255,255,255,.52);font-weight:600;color:#526d86}
 @media(max-width:1350px){.status-row-head .label{font-size:13px!important}.status-row-head{grid-template-columns:minmax(0,1fr) 48px}.status-row-head b{font-size:21px!important}}
+
+/* === KPI Status Summary: remove KPI count 2026-09-29 === */
+.status-row-head{grid-template-columns:1fr!important;}
+.status-row-head b{display:none!important;}
+.status-row{min-height:132px!important;}
+.status-row-head .label{padding-right:0!important;}
 </style></head>
 <body>
 <aside>
