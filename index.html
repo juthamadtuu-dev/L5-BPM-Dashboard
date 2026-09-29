@@ -488,23 +488,17 @@ function kpiCell(row,k,month,id){
  const sameName=x=>String(x.kpi||'').trim()===String(k.display||k.original||'').trim() || String(x.kpi||'').trim()===String(k.original||'').trim();
  if(k.baseIndex!=null){
    if(month!=='TTL'){
-     let rev=allEdits.slice().reverse();
-     // 1) exact KPI name (safest and preferred)
-     let e=rev.find(x=>sameRow(x)&&sameName(x));
-     // 2) exact base key for legacy rows
-     if(!e)e=rev.find(x=>sameRow(x)&&x.kpiKey==='base_'+k.baseIndex);
-     // 3) exact displayed key only; do not mix all logical aliases
-     if(!e)e=rev.find(x=>sameRow(x)&&x.kpiKey===k.key);
-     if(e)return {ttl:e.target,actual:e.actual,pct:e.pct};
-
-     // Show a KPI only in the month where that KPI actually has source data.
-     // This prevents a value saved in the latest month from appearing in earlier months.
-     const rawExact=RAW_KEY_DATA.find(r=>
-       r.month===month && String(r.id)===String(id) &&
-       String(r.kpi||'').trim()===String(k.original||k.display||'').trim()
-     );
-     if(!rawExact)return {ttl:null,actual:null,pct:null};
-     return {ttl:rawExact.ttl,actual:rawExact.actual,pct:rawExact.pct};
+     // Use Key Data as the single source of truth for month placement.
+     // A KPI appears ONLY in the exact month that exists in Key Data.
+     const wantedNames=new Set([k.display,k.original].filter(Boolean).map(v=>String(v).trim().toLowerCase()));
+     const exact=keyDataRows().slice().reverse().find(r=>{
+       if(r.month!==month || String(r.id)!==String(id)) return false;
+       const rn=String(r.kpi||'').trim().toLowerCase();
+       const rk=String(r.kpiKey||'');
+       return wantedNames.has(rn) || rk===String(k.key||'') || rk==='base_'+k.baseIndex;
+     });
+     if(!exact)return {ttl:null,actual:null,pct:null};
+     return {ttl:exact.ttl,actual:exact.actual,pct:exact.pct};
    }
    return row?.kpis?.[k.baseIndex]||{ttl:null,actual:null,pct:null};
  }
