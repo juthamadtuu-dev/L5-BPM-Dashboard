@@ -954,7 +954,7 @@ async function generatePowerPoint(){
    annual.forEach((a,i)=>{let y=4.52+i*.43,c=cardColors[i]||blue,avg=a.avg==null?'–':fmt(a.avg);s.addShape(pptx.ShapeType.ellipse,{x:.62,y:y+.02,w:.13,h:.13,fill:{color:c},line:{color:c}});s.addText(a.name,{x:.86,y,w:4.05,h:.22,fontFace:'Tahoma',fontSize:10.5,color:text,margin:0,fit:'shrink'});s.addText('Annual '+avg,{x:5.1,y,w:2.8,h:.22,fontFace:'Tahoma',fontSize:10.5,bold:true,color:text,margin:0});let st=statusOf(a);s.addText(st[0],{x:9.15,y,w:2.25,h:.22,fontFace:'Tahoma',fontSize:9,bold:true,color:st[1],align:'center',margin:0});});
  }
 
- function addOverallFirstPage(defs){
+ function addOverallFirstPage(scope,defs){
    const annual=annualData(defs);
    const valid=annual.filter(a=>a.avg!=null);
    const overall=valid.length?valid.reduce((s,a)=>s+a.avg,0)/valid.length:null;
@@ -965,7 +965,7 @@ async function generatePowerPoint(){
      {title:'No Data',rule:'',fill:'F7F8FA',dot:'C9B6E4',items:annual.filter(a=>a.avg==null)}
    ];
    let s=pptx.addSlide();
-   title(s,'KPIs Summary — Overall','Year '+currentYear);
+   title(s,scope==='ALL'?'KPIs Summary — Overall':'KPIs Summary — '+scope,'Year '+currentYear);
 
    // LEFT: Annual KPI chart
    s.addShape(pptx.ShapeType.roundRect,{x:.35,y:.95,w:5.55,h:5.95,rectRadius:.04,fill:{color:'FFFFFF'},line:{color:'D9E2EC',pt:1}});
@@ -1003,8 +1003,8 @@ async function generatePowerPoint(){
      s.addShape(pptx.ShapeType.ellipse,{x:x+.12,y:y+.16,w:.11,h:.11,fill:{color:g.dot},line:{color:g.dot}});
      s.addText(g.title,{x:x+.28,y:y+.11,w:1.02,h:.22,fontFace:'Tahoma',fontSize:9.2,bold:true,color:text,margin:0,fit:'shrink'});
      s.addText(g.rule,{x:x+.12,y:y+.45,w:1.16,h:.18,fontFace:'Tahoma',fontSize:7.5,bold:true,color:muted,margin:0,fit:'shrink'});
-     const itemText=g.items.length?g.items.map(a=>a.name==='MDM Tools / Dashboard'?'MDM Tools/Dashboard':a.name).join('\n'):'-';
-     s.addText(itemText,{x:x+.12,y:y+.86,w:1.18,h:1.08,fontFace:'Tahoma',fontSize:7.7,color:text,margin:0,fit:'shrink',valign:'top',breakLine:false});
+     const itemText=g.items.length?g.items.map(a=>a.name).join('\n'):'-';
+     s.addText(itemText,{x:x+.12,y:y+.86,w:1.18,h:1.08,fontFace:'Tahoma',fontSize:7.2,color:text,margin:0,fit:'shrink',valign:'top',breakLine:false});
    });
  }
 
@@ -1065,10 +1065,10 @@ if(!dataAsOf){
 }
 s.addText('Data as of: '+dataAsOf,{x:.65,y:4.0,w:5.15,h:.34,fontFace:'Tahoma',fontSize:14,color:'DCEBFA',align:'left',margin:0});
  // Overall first
- let pack=pptSeriesFor('ALL'),people=allPeople();addOverallFirstPage(pack.series);addSummary('ALL',pack.series,people);addStatusSummary('ALL',pack.series);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
+ let pack=pptSeriesFor('ALL'),people=allPeople();addOverallFirstPage('ALL',pack.series);addSummary('ALL',pack.series,people);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
  // Then each unit
  const units=[...new Set([...historyUnits(),...allPeople().map(x=>effectiveUnit(x)).filter(Boolean)])].sort((a,b)=>String(a).localeCompare(String(b),'th'));
- units.forEach(unit=>{let p=pptSeriesFor(unit),pp=allPeople().filter(x=>effectiveUnit(x)===unit);addSummary(unit,p.series,pp);addStatusSummary(unit,p.series);addTrend(unit,p.series);addDetail(unit,p.series);});
+ units.forEach(unit=>{let p=pptSeriesFor(unit),pp=allPeople().filter(x=>effectiveUnit(x)===unit);addOverallFirstPage(unit,p.series);addSummary(unit,p.series,pp);addTrend(unit,p.series);addDetail(unit,p.series);});
  await pptx.writeFile({fileName:'L5_BPM_KPIs_Presentation_Overall_and_Units_'+currentYear+'.pptx'});
  }catch(e){console.error(e);alert('Generate PowerPoint ไม่สำเร็จ: '+e.message)}finally{btn.disabled=false;btn.textContent='📊 PPT Present'}}
 
