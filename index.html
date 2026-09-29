@@ -158,6 +158,18 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 #kpiNoDataNames{white-space:pre-line!important;font-size:12px!important;line-height:1.55!important}
 #kpiNoDataNames::first-line{white-space:nowrap}
 
+
+/* No Data: exactly one KPI per line; keep MDM Tools/Dashboard intact */
+#kpiNoDataNames{
+  white-space:pre!important;
+  font-size:10px!important;
+  line-height:1.75!important;
+  letter-spacing:-0.15px!important;
+  overflow:visible!important;
+  word-break:keep-all!important;
+  overflow-wrap:normal!important;
+}
+
 </style></head>
 <body>
 <aside>
@@ -672,7 +684,7 @@ function renderKpiStatusSummary(series){
  const show=a=>a.length?a.join(' • '):'-';
  const showLines=a=>{
    if(!a.length)return '-';
-   return a.map(x=>x==='MDM Tools / Dashboard'?'MDM\u00A0Tools/Dashboard':x).join('\n');
+   return a.map(x=>x==='MDM Tools / Dashboard'?'MDM Tools/Dashboard':x).join('\n');
  };
  set('kpiAchieveNames',show(names(v=>v!=null&&v>=95))); set('kpiFollowNames',show(names(v=>v!=null&&v>=90&&v<95))); set('kpiActionNames',show(names(v=>v!=null&&v<90))); set('kpiNoDataNames',showLines(names(v=>v==null)));
 }
