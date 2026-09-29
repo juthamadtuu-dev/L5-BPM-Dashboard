@@ -144,6 +144,14 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 .status-row-head b{display:none!important;}
 .status-row{min-height:132px!important;}
 .status-row-head .label{padding-right:0!important;}
+
+/* === Matrix Summary: freeze first 4 KPI columns 2026-09-29 === */
+#matrix th:nth-child(1),#matrix td:nth-child(1){position:sticky;left:0;z-index:4}
+#matrix th:nth-child(2),#matrix td:nth-child(2){position:sticky;left:70px;z-index:4}
+#matrix th:nth-child(3),#matrix td:nth-child(3){position:sticky;left:290px;z-index:4}
+#matrix th:nth-child(4),#matrix td:nth-child(4){position:sticky;left:450px;z-index:4;box-shadow:3px 0 4px rgba(23,53,91,.10)}
+#matrix tr:first-child th:nth-child(-n+4){z-index:7}
+#matrix tr:not(:first-child) th:nth-child(-n+4),#matrix tr:not(:first-child) td:nth-child(-n+4){background:#d1e4f7}
 </style></head>
 <body>
 <aside>
@@ -283,7 +291,16 @@ syncYearUI();
 function fmt(v){if(v==null)return '-';let n=Number(v);return Math.abs(n-100)<1e-9?'100%':n.toFixed(2)+'%'}
 function cls(v){return v==null?'none':v>=95?'good':v>=90?'warn':'bad'}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function loadEdits(){try{return JSON.parse(localStorage.getItem('bdaPdcEditsV2')||'[]')}catch(e){return[]}}
+function loadEdits(){
+ try{
+  let edits=JSON.parse(localStorage.getItem('bdaPdcEditsV2')||'[]');
+  // Fixed 2026 data: ดารารัตน์ พวงเดช / Bug Service Survey = 83.41% every month
+  const fixedMonths=["JAN'26","FEB'26","MAR'26","APR'26","MAY'26","JUN'26","JUL'26","AUG'26","SEP'26","OCT'26","NOV'26","DEC'26"];
+  edits=edits.filter(e=>!(String(e.id)==='160170037' && e.kpiKey==='base_3' && fixedMonths.includes(e.month)));
+  fixedMonths.forEach(month=>edits.push({month,id:'160170037',kpiKey:'base_3',kpi:'Bug Service Survey',target:100,actual:83.41,pct:83.41,remark:''}));
+  return edits;
+ }catch(e){return[]}
+}
 function applyEdits(){
  D=JSON.parse(JSON.stringify(BASE));
  seedYearData(D,currentYear); D.months=monthsForYear(currentYear); months=monthsForYear(currentYear);
