@@ -106,15 +106,16 @@ tbody tr:hover td:not(.good):not(.warn):not(.bad){background:#eaf4ff}
 #kpiSetup td:nth-child(7) button{display:inline-flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap}
 
 /* === KPI Summary right-side status panel === */
-.historygrid{grid-template-columns:1fr;align-items:start}
-.historygrid .historybox:first-child{grid-column:auto}
-.historygrid .historybox:nth-child(2){max-width:none}
-.kpi-summary-top{order:-1}
+.historygrid{grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);align-items:stretch}
+.historygrid .historybox:first-child{grid-column:1 / -1;grid-row:2}
+.historygrid .historybox:nth-child(2){grid-column:1;grid-row:1;max-width:none;height:420px}
+.historygrid .historybox:nth-child(2) .chartwrap{height:360px}
+.kpi-summary-top{grid-column:2;grid-row:1;min-height:420px;height:420px}
 .kpi-status-panel{border:1px solid #bfd0df;border-radius:4px;background:#fff;overflow:hidden;min-height:420px}
 .kpi-status-panel h4{margin:0;padding:14px 16px;background:#dbeaff;color:#173f69;border-bottom:1px solid #c9d8e7}
 .kpi-status-body{padding:18px}.overall-kpi{text-align:center;padding:12px 10px 18px;border-bottom:1px solid #e4e7ec}.overall-kpi small{display:block;color:#667085;font-weight:700}.overall-kpi strong{display:block;font-size:42px;line-height:1.15;color:#12355b;margin:5px 0}.overall-kpi span{font-size:12px;color:#667085}
 .status-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}.status-row{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;padding:12px;border:1px solid #e4e7ec;border-radius:6px;min-height:112px}.status-row-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.status-names{margin-top:8px;font-size:12px;line-height:1.45;color:#526d86;font-weight:600;word-break:break-word}.status-row .label{font-weight:700}.status-row b{font-size:18px}.status-achieve{background:#eefaf2}.status-follow{background:#fff8e8}.status-action{background:#fff0f1}.status-nodata{background:#f7f8fa}
-@media(max-width:1100px){.status-list{grid-template-columns:1fr 1fr}}@media(max-width:700px){.status-list{grid-template-columns:1fr}}
+@media(max-width:1100px){.historygrid{grid-template-columns:1fr}.historygrid .historybox:first-child,.historygrid .historybox:nth-child(2),.kpi-summary-top{grid-column:1;grid-row:auto;height:auto}.status-list{grid-template-columns:1fr 1fr}}@media(max-width:700px){.status-list{grid-template-columns:1fr}}
 </style></head>
 <body>
 <aside>
