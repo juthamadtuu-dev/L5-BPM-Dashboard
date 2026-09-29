@@ -488,17 +488,14 @@ function kpiCell(row,k,month,id){
  const sameName=x=>String(x.kpi||'').trim()===String(k.display||k.original||'').trim() || String(x.kpi||'').trim()===String(k.original||'').trim();
  if(k.baseIndex!=null){
    if(month!=='TTL'){
-     // Use Key Data as the single source of truth for month placement.
-     // A KPI appears ONLY in the exact month that exists in Key Data.
-     const wantedNames=new Set([k.display,k.original].filter(Boolean).map(v=>String(v).trim().toLowerCase()));
-     const exact=keyDataRows().slice().reverse().find(r=>{
-       if(r.month!==month || String(r.id)!==String(id)) return false;
-       const rn=String(r.kpi||'').trim().toLowerCase();
-       const rk=String(r.kpiKey||'');
-       return wantedNames.has(rn) || rk===String(k.key||'') || rk==='base_'+k.baseIndex;
-     });
-     if(!exact)return {ttl:null,actual:null,pct:null};
-     return {ttl:exact.ttl,actual:exact.actual,pct:exact.pct};
+     let rev=allEdits.slice().reverse();
+     // 1) exact KPI name (safest and preferred)
+     let e=rev.find(x=>sameRow(x)&&sameName(x));
+     // 2) exact base key for legacy rows
+     if(!e)e=rev.find(x=>sameRow(x)&&x.kpiKey==='base_'+k.baseIndex);
+     // 3) exact displayed key only; do not mix all logical aliases
+     if(!e)e=rev.find(x=>sameRow(x)&&x.kpiKey===k.key);
+     if(e)return {ttl:e.target,actual:e.actual,pct:e.pct};
    }
    return row?.kpis?.[k.baseIndex]||{ttl:null,actual:null,pct:null};
  }
@@ -534,37 +531,6 @@ function keyDataRows(){
  const canonicalKey=(month,id,name,key)=>{let d=defForName(name,key);return month+'|'+id+'|'+(d?.key||key||name);};
  let map=new Map();
  baseRows.forEach(r=>{let d=defForName(r.kpi,r.kpiKey);map.set(canonicalKey(r.month,r.id,r.kpi,r.kpiKey),{...r,kpiKey:d?.key||r.kpiKey||'',kpi:d?.display||r.kpi,source:'Excel'});});
-
- // FIX: Key Data must show EVERY month that actually has KPI data in the dashboard,
- // not only the latest/raw imported month. Build missing Key Data rows directly
- // from the monthly dashboard dataset (D.data) before applying Input Score edits.
- months.forEach(month=>{
-   (D.data[month]||[]).forEach(person=>{
-     (person.kpis||[]).forEach((cell,idx)=>{
-       if(!cell || (cell.ttl==null && cell.actual==null && cell.pct==null)) return;
-       let d=defs.find(x=>x.baseIndex===idx) || defs.find(x=>x.key==='base_'+idx);
-       if(!d) return;
-       let key=canonicalKey(month,person.id,d.display||d.original,d.key);
-       if(!map.has(key)){
-         map.set(key,{
-           month:month,
-           id:String(person.id),
-           name:person.name||String(person.id),
-           unit:person.position||'',
-           evaluator:person.evaluator||'',
-           kpiKey:d.key||('base_'+idx),
-           kpi:d.display||d.original||('KPI '+(idx+1)),
-           ttl:cell.ttl,
-           actual:cell.actual,
-           pct:cell.pct,
-           remark:'',
-           source:'Dashboard Month'
-         });
-       }
-     });
-   });
- });
-
  edits.forEach(e=>{
    let kd=defForName(e.kpi,e.kpiKey), person=allPeople().find(x=>x.id===e.id);
    let key=canonicalKey(e.month,e.id,e.kpi,e.kpiKey);
