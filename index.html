@@ -672,7 +672,7 @@ function renderKpiStatusSummary(series){
  const show=a=>a.length?a.join(' • '):'-';
  const showLines=a=>{
    if(!a.length)return '-';
-   return a.map(x=>x==='MDM Tools / Dashboard'?'MDM Tools/Dashboard':x).join('\n');
+   return a.map(x=>x==='MDM Tools / Dashboard'?'MDM\u00A0Tools/Dashboard':x).join('\n');
  };
  set('kpiAchieveNames',show(names(v=>v!=null&&v>=95))); set('kpiFollowNames',show(names(v=>v!=null&&v>=90&&v<95))); set('kpiActionNames',show(names(v=>v!=null&&v<90))); set('kpiNoDataNames',showLines(names(v=>v==null)));
 }
@@ -942,6 +942,60 @@ async function generatePowerPoint(){
    annual.forEach((a,i)=>{let y=4.52+i*.43,c=cardColors[i]||blue,avg=a.avg==null?'–':fmt(a.avg);s.addShape(pptx.ShapeType.ellipse,{x:.62,y:y+.02,w:.13,h:.13,fill:{color:c},line:{color:c}});s.addText(a.name,{x:.86,y,w:4.05,h:.22,fontFace:'Tahoma',fontSize:10.5,color:text,margin:0,fit:'shrink'});s.addText('Annual '+avg,{x:5.1,y,w:2.8,h:.22,fontFace:'Tahoma',fontSize:10.5,bold:true,color:text,margin:0});let st=statusOf(a);s.addText(st[0],{x:9.15,y,w:2.25,h:.22,fontFace:'Tahoma',fontSize:9,bold:true,color:st[1],align:'center',margin:0});});
  }
 
+ function addOverallFirstPage(defs){
+   const annual=annualData(defs);
+   const valid=annual.filter(a=>a.avg!=null);
+   const overall=valid.length?valid.reduce((s,a)=>s+a.avg,0)/valid.length:null;
+   const groups=[
+     {title:'Achieve',rule:'≥ 95%',fill:'EEF9F1',dot:'35C777',items:annual.filter(a=>a.avg!=null&&a.avg>=95)},
+     {title:'Follow-up',rule:'90 – 94.99%',fill:'FFF8E8',dot:'FF7A45',items:annual.filter(a=>a.avg!=null&&a.avg>=90&&a.avg<95)},
+     {title:'Need Action',rule:'< 90%',fill:'FFF0F1',dot:'E63B55',items:annual.filter(a=>a.avg!=null&&a.avg<90)},
+     {title:'No Data',rule:'',fill:'F7F8FA',dot:'C9B6E4',items:annual.filter(a=>a.avg==null)}
+   ];
+   let s=pptx.addSlide();
+   title(s,'KPIs Summary — Overall','Year '+currentYear);
+
+   // LEFT: Annual KPI chart
+   s.addShape(pptx.ShapeType.roundRect,{x:.35,y:.95,w:5.55,h:5.95,rectRadius:.04,fill:{color:'FFFFFF'},line:{color:'D9E2EC',pt:1}});
+   s.addText('📊  รวมปี (แยก KPI)',{x:.58,y:1.12,w:4.8,h:.32,fontFace:'Tahoma',fontSize:14,bold:true,color:text,margin:0});
+   const chartX=.85, chartY=1.78, chartW=4.65, chartH=3.55;
+   [0,20,40,60,80,100].forEach(v=>{
+      const yy=chartY+chartH-(v/100)*chartH;
+      s.addShape(pptx.ShapeType.line,{x:chartX,y:yy,w:chartW,h:0,line:{color:'E3EAF2',pt:.7}});
+      s.addText(v+'%',{x:.48,y:yy-.10,w:.34,h:.18,fontFace:'Tahoma',fontSize:8,color:muted,align:'right',margin:0});
+   });
+   const bw=.48, gap=.47;
+   annual.forEach((a,i)=>{
+      const cx=chartX+.30+i*(bw+gap);
+      if(a.avg!=null){
+        const bh=Math.max(.02,(Math.min(100,a.avg)/100)*chartH);
+        const by=chartY+chartH-bh;
+        s.addShape(pptx.ShapeType.rect,{x:cx,y:by,w:bw,h:bh,fill:{color:cardColors[i]||blue},line:{color:cardColors[i]||blue}});
+        s.addText(fmt(a.avg),{x:cx-.18,y:by-.28,w:bw+.36,h:.20,fontFace:'Tahoma',fontSize:8.5,bold:true,color:text,align:'center',margin:0,fit:'shrink'});
+      }
+      const nm=a.name==='MDM Tools / Dashboard'?'MDM Tools /\nDashboard':a.name.replace(' ','\n');
+      s.addText(nm,{x:cx-.25,y:5.48,w:bw+.50,h:.62,fontFace:'Tahoma',fontSize:7.5,color:muted,align:'center',valign:'top',margin:0,fit:'shrink'});
+   });
+
+   // RIGHT: KPI Status Summary
+   s.addShape(pptx.ShapeType.roundRect,{x:6.08,y:.95,w:6.90,h:5.95,rectRadius:.04,fill:{color:'FFFFFF'},line:{color:'D9E2EC',pt:1}});
+   s.addText('🎯  KPI Status Summary',{x:6.32,y:1.12,w:5.8,h:.32,fontFace:'Tahoma',fontSize:14,bold:true,color:text,margin:0});
+   s.addText('Overall KPI',{x:8.15,y:1.72,w:2.8,h:.24,fontFace:'Tahoma',fontSize:11,bold:true,color:muted,align:'center',margin:0});
+   s.addText(overall==null?'–':fmt(overall),{x:7.82,y:2.00,w:3.45,h:.60,fontFace:'Tahoma',fontSize:30,bold:true,color:navy,align:'center',margin:0});
+   s.addText('Average of KPIs with data',{x:7.75,y:2.62,w:3.6,h:.20,fontFace:'Tahoma',fontSize:8.5,color:muted,align:'center',margin:0});
+   s.addShape(pptx.ShapeType.line,{x:6.35,y:3.00,w:6.35,h:0,line:{color:'D9E2EC',pt:1}});
+
+   groups.forEach((g,i)=>{
+     const x=6.35+i*1.57, y=3.28, w=1.43, h=2.25;
+     s.addShape(pptx.ShapeType.roundRect,{x,y,w,h,rectRadius:.05,fill:{color:g.fill},line:{color:'D9E2EC',pt:.8}});
+     s.addShape(pptx.ShapeType.ellipse,{x:x+.12,y:y+.16,w:.11,h:.11,fill:{color:g.dot},line:{color:g.dot}});
+     s.addText(g.title,{x:x+.28,y:y+.11,w:1.02,h:.22,fontFace:'Tahoma',fontSize:9.2,bold:true,color:text,margin:0,fit:'shrink'});
+     s.addText(g.rule,{x:x+.12,y:y+.45,w:1.16,h:.18,fontFace:'Tahoma',fontSize:7.5,bold:true,color:muted,margin:0,fit:'shrink'});
+     const itemText=g.items.length?g.items.map(a=>a.name==='MDM Tools / Dashboard'?'MDM Tools/Dashboard':a.name).join('\n'):'-';
+     s.addText(itemText,{x:x+.12,y:y+.86,w:1.18,h:1.08,fontFace:'Tahoma',fontSize:7.7,color:text,margin:0,fit:'shrink',valign:'top',breakLine:false});
+   });
+ }
+
  function addStatusSummary(scope,defs){
    const annual=annualData(defs);
    const valid=annual.filter(a=>a.avg!=null);
@@ -999,7 +1053,7 @@ if(!dataAsOf){
 }
 s.addText('Data as of: '+dataAsOf,{x:.65,y:4.0,w:5.15,h:.34,fontFace:'Tahoma',fontSize:14,color:'DCEBFA',align:'left',margin:0});
  // Overall first
- let pack=pptSeriesFor('ALL'),people=allPeople();addStatusSummary('ALL',pack.series);addSummary('ALL',pack.series,people);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
+ let pack=pptSeriesFor('ALL'),people=allPeople();addOverallFirstPage(pack.series);addSummary('ALL',pack.series,people);addStatusSummary('ALL',pack.series);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
  // Then each unit
  const units=[...new Set([...historyUnits(),...allPeople().map(x=>effectiveUnit(x)).filter(Boolean)])].sort((a,b)=>String(a).localeCompare(String(b),'th'));
  units.forEach(unit=>{let p=pptSeriesFor(unit),pp=allPeople().filter(x=>effectiveUnit(x)===unit);addSummary(unit,p.series,pp);addStatusSummary(unit,p.series);addTrend(unit,p.series);addDetail(unit,p.series);});
