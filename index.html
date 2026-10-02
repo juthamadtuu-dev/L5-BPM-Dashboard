@@ -923,29 +923,37 @@ function exportDataUpdate(){
 function loadPptxGenJS(){return new Promise((resolve,reject)=>{if(window.PptxGenJS)return resolve();let s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';s.onload=resolve;s.onerror=()=>reject(new Error('ไม่สามารถโหลด PowerPoint library ได้ กรุณาตรวจสอบ Internet'));document.head.appendChild(s)})}
 function pptSeriesFor(unit='ALL'){
  applyEdits();
- const people=allPeople().filter(x=>unit==='ALL'||effectiveUnit(x)===unit);
- const allDefs=kpiDefs();
- const unitExactDefs = unit==='ALL' ? [] : allDefs.filter(k=>String(k.unit||'ALL')===String(unit));
- const defs = unit==='ALL' ? kpiDefsForUnit('ALL') : (unitExactDefs.length ? unitExactDefs : kpiDefsForUnit(unit));
+ // IMPORTANT: use the exact same Key Data source/logic as the dashboard Monthly Trend.
+ // This prevents JAN/FEB or other historical months disappearing in PPT Preview.
+ const rows=keyDataRows();
+ const defs=kpiDefsForUnit(unit);
+ const scopedRows=rows.filter(r=>unit==='ALL'||String(r.unit||'')===String(unit));
+ const ids=[...new Set(scopedRows.map(r=>String(r.id)).filter(Boolean))];
  const series=defs.map(k=>({
    name:k.display,
    vals:months.map(m=>{
-     const vals=[];
-     people.forEach(x=>{
-       const row=(D.data[m]||[]).find(z=>String(z.id)===String(x.id))||x;
-       const c=kpiCell(row,k,m,x.id);
-       const v=c&&Number(c.pct);
-       // PPT: 0/0 is a placeholder for No Data, not a real 0% score.
-       // Keep a true 0% only when a positive target exists.
-       const target=c&&Number(c.ttl);
-       const actual=c&&Number(c.actual);
-       const isPlaceholderZero = Number.isFinite(v) && v===0 && (!Number.isFinite(target) || target===0) && (!Number.isFinite(actual) || actual===0);
-       if(Number.isFinite(v) && !isPlaceholderZero) vals.push(v);
+     const names=new Set([k.display,k.original].filter(Boolean).map(x=>String(x).trim().toLowerCase()));
+     const sameNameBase=kpiDefs().find(d=>d.baseIndex!=null && names.has(String(d.display||d.original||'').trim().toLowerCase()));
+     if(sameNameBase){
+       names.add(String(sameNameBase.display||'').trim().toLowerCase());
+       names.add(String(sameNameBase.original||'').trim().toLowerCase());
+     }
+     const keys=new Set([k.key,...(k._logicalKeys||[])].filter(Boolean));
+     if(k.baseIndex!=null)keys.add('base_'+k.baseIndex);
+     if(sameNameBase)keys.add(sameNameBase.key);
+     const monthRows=scopedRows.filter(r=>r.month===m && (
+       (r.kpiKey && keys.has(r.kpiKey)) || names.has(String(r.kpi||'').trim().toLowerCase())
+     ));
+     const byEmp=new Map();
+     monthRows.forEach(r=>{
+       const v=Number(r.pct);
+       if(Number.isFinite(v))byEmp.set(String(r.id),v);
      });
+     const vals=[...byEmp.values()];
      return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
    })
  }));
- return {unit,ids:people.map(x=>String(x.id)),series};
+ return {unit,ids,series};
 }
 
 async function generatePowerPoint(){
