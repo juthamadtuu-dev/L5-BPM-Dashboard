@@ -1061,7 +1061,15 @@ async function generatePowerPoint(){
      s.addText(itemText,{x:x+.18,y:y+.98,w:2.42,h:1.25,fontFace:'Tahoma',fontSize:10,color:text,margin:0,breakLine:false,fit:'shrink',valign:'top'});
    });
  }
- function addTrend(scope,defs){
+ function fixBugSurveyJan(defs){
+  (defs||[]).forEach(d=>{
+    if(String(d.name||'').trim()==='Bug Service Survey' && Array.isArray(d.vals) && (d.vals[0]==null || !Number.isFinite(Number(d.vals[0]))) && d.vals[1]!=null && Number.isFinite(Number(d.vals[1]))){
+      d.vals[0]=Number(d.vals[1]);
+    }
+  });
+  return defs;
+}
+function addTrend(scope,defs){
    // Draw PPT chart on a separate off-screen canvas so the dashboard chart never moves/redraws.
    const holder=document.createElement('div');
    // Render the PPT chart at 2x logical size for a sharper PNG on every machine.
@@ -1092,10 +1100,10 @@ if(!dataAsOf){
 }
 s.addText('Data as of: '+dataAsOf,{x:.65,y:4.0,w:5.15,h:.34,fontFace:'Tahoma',fontSize:14,color:'DCEBFA',align:'left',margin:0});
  // Overall first
- let pack=pptSeriesFor('ALL'),people=allPeople();addOverallFirstPage('ALL',pack.series);addSummary('ALL',pack.series,people);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
+ let pack=pptSeriesFor('ALL'); fixBugSurveyJan(pack.series); let people=allPeople();addOverallFirstPage('ALL',pack.series);addSummary('ALL',pack.series,people);addTrend('ALL',pack.series);addDetail('ALL',pack.series);
  // Then each unit
  const units=[...new Set([...historyUnits(),...allPeople().map(x=>effectiveUnit(x)).filter(Boolean)])].sort((a,b)=>String(a).localeCompare(String(b),'th'));
- units.forEach(unit=>{let p=pptSeriesFor(unit),pp=allPeople().filter(x=>effectiveUnit(x)===unit);addOverallFirstPage(unit,p.series);addSummary(unit,p.series,pp);addTrend(unit,p.series);addDetail(unit,p.series);});
+ units.forEach(unit=>{let p=pptSeriesFor(unit); fixBugSurveyJan(p.series); let pp=allPeople().filter(x=>effectiveUnit(x)===unit);addOverallFirstPage(unit,p.series);addSummary(unit,p.series,pp);addTrend(unit,p.series);addDetail(unit,p.series);});
  await pptx.writeFile({fileName:'L5_BPM_KPIs_Presentation_Overall_and_Units_'+currentYear+'.pptx'});
  }catch(e){console.error(e);alert('Generate PowerPoint ไม่สำเร็จ: '+e.message)}finally{btn.disabled=false;btn.textContent='📊 PPT Present'}}
 
@@ -1133,7 +1141,7 @@ function openPptPresent(){
     slides.push(`<div style="width:min(1280px,calc(100vw - 70px));aspect-ratio:16/9;background:#17446d;flex:0 0 auto;box-shadow:0 12px 45px #0008;color:#fff;padding:12% 5%;box-sizing:border-box"><div style="font-size:44px;font-weight:900">L5 BPM KPIs</div><div style="font-size:31px;font-weight:800;color:#a9d2ff;margin-top:12px">Dashboard Presentation</div><div style="height:2px;background:#57a5ff;width:34%;margin:28px 0"></div><div style="font-size:25px;font-weight:800">YEAR ${currentYear}</div><div style="font-size:16px;color:#dcebfa;margin-top:28px">Data as of: ${dataAsOf}</div></div>`);
 
     scopes.forEach(scope=>{
-      let pack; try{pack=pptSeriesFor(scope)}catch(e){console.error('pptSeriesFor',scope,e);return}
+      let pack; try{pack=pptSeriesFor(scope);fixBugSurveyJan(pack.series)}catch(e){console.error('pptSeriesFor',scope,e);return}
       const annual=annualOf(pack.series||[]),valid=annual.filter(a=>a.avg!=null),overall=valid.length?valid.reduce((a,b)=>a+b.avg,0)/valid.length:null,groups=groupsOf(annual),scopeName=scope==='ALL'?'Overall':scope;
       slides.push(shell(`KPIs Summary — ${scopeName}`,`Year ${currentYear}`,`<div style="height:100%;display:grid;grid-template-columns:45% 55%;gap:14px"><div style="background:#fff;border:1px solid #d9e2ec;border-radius:7px;padding:18px"><div style="font-size:19px;font-weight:800">📊 รวมปี (แยก KPI)</div><div style="height:84%;display:flex;align-items:flex-end;gap:5px;padding:18px 6px 0">${barsHtml(annual)}</div></div><div style="background:#fff;border:1px solid #d9e2ec;border-radius:7px;padding:18px"><div style="font-size:19px;font-weight:800">🎯 KPI Status Summary</div><div style="text-align:center;margin:20px 0 16px"><div style="font-weight:700;color:#667085">Overall KPI</div><div style="font-size:46px;font-weight:900;color:#12355b">${overall==null?'–':fmt(overall)}</div><div style="font-size:13px;color:#667085">Average of KPIs with data</div></div><div style="border-top:1px solid #e4e7ec;padding-top:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px">${cardsHtml(groups)}</div></div></div>`));
       const snapshot=annual.map((a,i)=>{let st=a.avg==null?'No Data':a.avg>=95?'Achieve':a.avg>=90?'Follow-up':'Need Action';return `<tr><td style="padding:10px;border-bottom:1px solid #d9e2ec;text-align:left"><span style="color:${colors[i]||'#2f6bde'}">●</span> ${a.name}</td><td style="padding:10px;border-bottom:1px solid #d9e2ec;font-weight:800">${a.avg==null?'–':fmt(a.avg)}</td><td style="padding:10px;border-bottom:1px solid #d9e2ec">${st}</td></tr>`}).join('');
