@@ -935,7 +935,12 @@ function pptSeriesFor(unit='ALL'){
        const row=(D.data[m]||[]).find(z=>String(z.id)===String(x.id))||x;
        const c=kpiCell(row,k,m,x.id);
        const v=c&&Number(c.pct);
-       if(Number.isFinite(v)) vals.push(v);
+       // PPT: 0/0 is a placeholder for No Data, not a real 0% score.
+       // Keep a true 0% only when a positive target exists.
+       const target=c&&Number(c.ttl);
+       const actual=c&&Number(c.actual);
+       const isPlaceholderZero = Number.isFinite(v) && v===0 && (!Number.isFinite(target) || target===0) && (!Number.isFinite(actual) || actual===0);
+       if(Number.isFinite(v) && !isPlaceholderZero) vals.push(v);
      });
      return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
    })
