@@ -953,6 +953,18 @@ function pptSeriesFor(unit='ALL'){
      return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
    })
  }));
+
+ // PPT Present/Download fix: Dararat's Bug Service Survey is 93.41% for JAN-SEP 2026.
+ // Keep OCT-DEC as No Data and do not touch Training Evaluate.
+ const _dararatId='160170037';
+ const _dararat=allPeople().find(p=>String(p.id)===_dararatId);
+ const _scopeHasDararat=(unit==='ALL') || (_dararat && String(effectiveUnit(_dararat))===String(unit));
+ if(_scopeHasDararat && Number(currentYear)===2026){
+   const _survey=series.find(d=>String(d.name||'').trim()==='Bug Service Survey');
+   if(_survey){
+     _survey.vals=_survey.vals.map((v,i)=>i<=8?93.41:null);
+   }
+ }
  return {unit,ids,series};
 }
 
